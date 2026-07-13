@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { CelebrationOverlay } from '@/components/CelebrationOverlay';
 
 type Quiz = {
   id: string;
@@ -46,6 +47,8 @@ export default function QuizPage() {
   const [isCorrect, setIsCorrect] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [levelCompleted, setLevelCompleted] = useState(false);
+  const [earnedXp, setEarnedXp] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -95,10 +98,11 @@ export default function QuizPage() {
 
     const selectedOption = options.find((item) => item.id === selected);
     const answerIsCorrect = !!selectedOption?.is_correct;
-    const earnedXp = answerIsCorrect ? quiz.xp_reward : 0;
+    const gainedXp = answerIsCorrect ? quiz.xp_reward : 0;
 
     setSubmitted(true);
     setIsCorrect(answerIsCorrect);
+    setEarnedXp(gainedXp);
     setFeedback(
       answerIsCorrect
         ? 'Risposta corretta! Ottimo lavoro.'
@@ -111,7 +115,7 @@ export default function QuizPage() {
       quiz_id: quiz.id,
       selected_option_id: selected,
       is_correct: answerIsCorrect,
-      earned_xp: earnedXp
+      earned_xp: gainedXp,
     });
 
     const { data: profile } = await supabase
@@ -142,9 +146,9 @@ export default function QuizPage() {
     await supabase
       .from('profiles')
       .update({
-        total_xp: (profileRow?.total_xp ?? 0) + earnedXp,
+        total_xp: (profileRow?.total_xp ?? 0) + gainedXp,
         current_streak: nextStreak,
-        last_activity_on: todayStr
+        last_activity_on: todayStr,
       })
       .eq('id', user.id);
 
@@ -160,6 +164,7 @@ export default function QuizPage() {
 
     const completedQuizzes = correctIds.size;
     const isCompleted = completedQuizzes >= 5;
+    setLevelCompleted(answerIsCorrect && isCompleted);
 
     await supabase.from('user_level_progress').upsert(
       {
@@ -168,7 +173,7 @@ export default function QuizPage() {
         completed_quizzes: completedQuizzes,
         xp_earned: completedQuizzes * quiz.xp_reward,
         is_completed: isCompleted,
-        completed_at: isCompleted ? new Date().toISOString() : null
+        completed_at: isCompleted ? new Date().toISOString() : null,
       },
       { onConflict: 'user_id,level_id' }
     );
@@ -187,7 +192,7 @@ export default function QuizPage() {
         await supabase.from('user_badges').upsert(
           {
             user_id: user.id,
-            badge_id: badge.id
+            badge_id: badge.id,
           },
           { onConflict: 'user_id,badge_id' }
         );
@@ -198,10 +203,16 @@ export default function QuizPage() {
   }
 
   const currentLevel = quiz?.levels?.[0];
+  const celebrationMode = useMemo(() => {
+    if (!submitted || !isCorrect) return null;
+    return levelCompleted ? 'level' : 'quiz';
+  }, [submitted, isCorrect, levelCompleted]);
 
   return (
-    <div className="page">
+    <div className="page celebration-page">
       <div className="container" style={{ maxWidth: 820 }}>
+        {celebrationMode ? <CelebrationOverlay show={true} mode={celebrationMode} /> : null}
+
         <div className="topbar">
           <div>
             <span className="badge">Quiz</span>
@@ -216,7 +227,7 @@ export default function QuizPage() {
           </Link>
         </div>
 
-        <div className="card">
+        <div className="card celebration-shell">
           <div className="grid">
             {options.map((option) => {
               let cls = 'option';
@@ -247,15 +258,39 @@ export default function QuizPage() {
                 {saving ? 'Salvataggio...' : 'Conferma risposta'}
               </button>
             ) : (
-              <div className="card" style={{ background: isCorrect ? '#f0fdf4' : '#fef2f2' }}>
-                <h3 style={{ marginTop: 0 }}>{isCorrect ? 'Corretto 🎉' : 'Quasi!'}</h3>
-                <p>{feedback}</p>
+              <div
+                className={`card celebration-result ${
+                  isCorrect ? 'celebration-result-success' : 'celebration-result-error'
+                }`}
+              >
+                <div className="celebration-result-header">
+                  <div>
+                    <h3 style={{ marginTop: 0 }}>
+                      {levelCompleted
+                        ? 'Livello completato! 🏆'
+                        : isCorrect
+                        ? 'Corretto 🎉'
+                        : 'Quasi!'}
+                    </h3>
+                    <p>{feedback}</p>
+                  </div>
+                  {isCorrect ? (
+                    <div className="celebration-xp-pill">+{earnedXp} XP</div>
+                  ) : null}
+                </div>
+
+                {levelCompleted ? (
+                  <div className="celebration-big-banner">
+                    Hai sbloccato badge, progresso e un finale più scenografico. Ottimo lavoro.
+                  </div>
+                ) : null}
+
                 <div className="row mt-16">
                   <Link
                     href={currentLevel?.slug ? `/livello/${currentLevel.slug}` : '/dashboard'}
                     className="button button-primary"
                   >
-                    Torna al livello
+                    {levelCompleted ? 'Guarda il livello completato' : 'Torna al livello'}
                   </Link>
                   <Link href="/dashboard" className="button button-outline">
                     Vai alla home

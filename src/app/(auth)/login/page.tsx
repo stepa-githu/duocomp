@@ -36,7 +36,7 @@ export default function LoginPage() {
           <span className="badge">MVP 0.1</span>
           <h1 className="title mt-16">Accedi a Concorsi Hero</h1>
           <p className="subtitle">
-            A volte un'idea nata in spiaggia è l'IDEA <br>Altre volte no, è solo un'idea.</br>.
+            A volte un'idea nata in spiaggia è l'IDEA.Altre volte no, è solo un'idea.
           </p>
 
           <form className="grid mt-24" onSubmit={onSubmit}>
