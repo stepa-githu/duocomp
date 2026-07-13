@@ -1,0 +1,10 @@
+{
+  "/(admin)/admin/page": "app/(admin)/admin/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(player)/dashboard/page": "app/(player)/dashboard/page.js",
+  "/(player)/livello/[slug]/page": "app/(player)/livello/[slug]/page.js",
+  "/(player)/quiz/[id]/page": "app/(player)/quiz/[id]/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js"
+}

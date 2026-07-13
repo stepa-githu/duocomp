@@ -1,0 +1,3 @@
+{
+  "/(player)/livello/[slug]/page": "app/(player)/livello/[slug]/page.js"
+}
