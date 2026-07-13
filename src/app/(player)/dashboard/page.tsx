@@ -38,6 +38,15 @@ type UserBadge = {
   }[] | null;
 };
 
+type MappedLevel = Level & {
+  quiz_count: number;
+  completed_quizzes: number;
+  is_locked: boolean;
+  is_completed: boolean;
+  is_current: boolean;
+  completion_pct: number;
+};
+
 export default function DashboardPage() {
   const supabase = createClient();
   const router = useRouter();
@@ -81,21 +90,42 @@ export default function DashboardPage() {
     load();
   }, [router, supabase]);
 
-  const mappedLevels = useMemo(() => {
-    return levels.map((level, index) => {
+  const mappedLevels = useMemo<MappedLevel[]>(() => {
+    const baseLevels = levels.map((level, index) => {
       const item = progress.find((p) => p.level_id === level.id);
       const previous = levels[index - 1];
       const previousProgress = previous ? progress.find((p) => p.level_id === previous.id) : null;
       const isLocked = previous ? !previousProgress?.is_completed : false;
+      const completedQuizzes = item?.completed_quizzes ?? 0;
+      const quizCount = 5;
+      const completionPct = Math.round((completedQuizzes / quizCount) * 100);
 
       return {
         ...level,
-        quiz_count: 5,
-        completed_quizzes: item?.completed_quizzes ?? 0,
-        is_locked: isLocked
+        quiz_count: quizCount,
+        completed_quizzes: completedQuizzes,
+        is_locked: isLocked,
+        is_completed: item?.is_completed ?? false,
+        is_current: false,
+        completion_pct: completionPct
       };
     });
+
+    const currentTarget =
+      baseLevels.find((level) => !level.is_locked && !level.is_completed) ??
+      baseLevels.find((level) => !level.is_locked) ??
+      null;
+
+    return baseLevels.map((level) => ({
+      ...level,
+      is_current: currentTarget ? currentTarget.id === level.id : false
+    }));
   }, [levels, progress]);
+
+  const currentLevel =
+    mappedLevels.find((level) => level.is_current) ??
+    mappedLevels.find((level) => !level.is_locked) ??
+    null;
 
   async function logout() {
     await supabase.auth.signOut();
@@ -116,70 +146,130 @@ export default function DashboardPage() {
   return (
     <div className="page">
       <div className="container">
-        <div className="topbar">
-          <div>
-            <h1 className="title">Ciao {profile?.display_name ?? 'utente'} 👋</h1>
-            <p className="subtitle">Riparti dal tuo percorso sui concorsi pubblici.</p>
+        <div className="dashboard-hero card">
+          <div className="dashboard-hero-main">
+            <div>
+              <div className="dashboard-hero-kicker">Percorso Concorsi Hero</div>
+              <h1 className="title">Ciao {profile?.display_name ?? 'utente'} 👋</h1>
+              <p className="subtitle">
+                Continua da dove eri rimasto e completa il prossimo step del tuo percorso.
+              </p>
+            </div>
+
+            <div className="dashboard-hero-actions">
+              {profile?.role === 'admin' ? (
+                <Link href="/admin" className="button button-secondary">
+                  Admin
+                </Link>
+              ) : null}
+              <button className="button button-outline" onClick={logout}>
+                Esci
+              </button>
+            </div>
           </div>
-          <div className="row">
-            {profile?.role === 'admin' ? (
-              <Link href="/admin" className="button button-secondary">
-                Admin
-              </Link>
-            ) : null}
-            <button className="button button-outline" onClick={logout}>
-              Esci
-            </button>
+
+          <div className="dashboard-hero-pills">
+            <div className="dashboard-pill">
+              <span>⚡</span>
+              <strong>{profile?.total_xp ?? 0} XP</strong>
+            </div>
+            <div className="dashboard-pill">
+              <span>🔥</span>
+              <strong>{profile?.current_streak ?? 0} giorni</strong>
+            </div>
+            <div className="dashboard-pill">
+              <span>🏅</span>
+              <strong>{badges.length} badge</strong>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-3 mb-16">
-          <div className="card">
+        <div className="dashboard-stats-grid mt-24">
+          <div className="card stat-card stat-card-xp">
             <div className="badge">XP</div>
             <h2>{profile?.total_xp ?? 0}</h2>
             <p className="muted">Punti esperienza totali</p>
           </div>
-          <div className="card">
+
+          <div className="card stat-card stat-card-streak">
             <div className="badge">Streak</div>
             <h2>{profile?.current_streak ?? 0} giorni</h2>
-            <p className="muted">Giorni consecutivi attivi</p>
+            <p className="muted">Continuità di allenamento</p>
           </div>
-          <div className="card">
+
+          <div className="card stat-card stat-card-badge">
             <div className="badge">Badge</div>
             <h2>{badges.length}</h2>
             <p className="muted">Ricompense già ottenute</p>
           </div>
         </div>
 
-        <div className="grid grid-2">
+        <div className="grid grid-2 mt-24">
           <div className="card">
             <div className="space-between mb-16">
               <h2 style={{ margin: 0 }}>Il tuo percorso</h2>
               <span className="badge">3 livelli • 15 quiz</span>
             </div>
+
             <PathMap levels={mappedLevels} />
           </div>
 
           <div className="grid">
+            <div className="card next-target-card">
+              <div className="badge">Prossimo step</div>
+              <h2 style={{ marginTop: 12 }}>
+                {currentLevel ? currentLevel.title : 'Percorso completato'}
+              </h2>
+              <p className="muted">
+                {currentLevel
+                  ? currentLevel.description ?? 'Continua con il prossimo livello disponibile.'
+                  : 'Hai completato tutti i livelli pubblicati.'}
+              </p>
+
+              {currentLevel ? (
+                <>
+                  <div className="progress-wrap mt-16">
+                    <div
+                      className="progress-bar"
+                      style={{ width: `${currentLevel.completion_pct}%` }}
+                    />
+                  </div>
+                  <p className="muted" style={{ marginTop: 8 }}>
+                    {currentLevel.completed_quizzes}/{currentLevel.quiz_count} quiz completati
+                  </p>
+
+                  <Link
+                    href={`/livello/${currentLevel.slug}`}
+                    className="button button-primary mt-16"
+                  >
+                    Continua il livello
+                  </Link>
+                </>
+              ) : null}
+            </div>
+
             <div className="card">
               <h2 style={{ marginTop: 0 }}>Badge ottenuti</h2>
-              <div className="grid">
+
+              <div className="badge-list-compact">
                 {badges.length === 0 ? (
                   <p className="muted">Nessun badge ancora sbloccato.</p>
                 ) : (
                   badges.map((item) => (
-                    <div className="row" key={item.id}>
-                      <span style={{ fontSize: 24 }}>{item.badges?.[0]?.icon ?? '🏅'}</span>
+                    <div className="badge-chip" key={item.id}>
+                      <span className="badge-chip-icon">{item.badges?.[0]?.icon ?? '🏅'}</span>
                       <strong>{item.badges?.[0]?.title ?? 'Badge'}</strong>
                     </div>
                   ))
                 )}
               </div>
             </div>
+
             <div className="card">
-              <h2 style={{ marginTop: 0 }}>Consiglio MVP</h2>
+              <h2 style={{ marginTop: 0 }}>Metodo consigliato</h2>
               <p className="muted">
-                Mantieni sessioni brevi: 1 quiz alla volta, feedback immediato, progresso visibile.
+                Sessioni brevi, una domanda alla volta, feedback immediato e progressione visibile:
+                è il modo più efficace per dare ritmo al percorso.
               </p>
             </div>
           </div>
