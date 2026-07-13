@@ -15,7 +15,7 @@ type Quiz = {
     slug: string;
     title: string;
     sort_order: number;
-  } | null;
+  }[] | null;
 };
 
 type Option = {
@@ -99,7 +99,11 @@ export default function QuizPage() {
 
     setSubmitted(true);
     setIsCorrect(answerIsCorrect);
-    setFeedback(answerIsCorrect ? 'Risposta corretta! Ottimo lavoro.' : quiz.explanation ?? 'Risposta errata, ma puoi riprovare subito.');
+    setFeedback(
+      answerIsCorrect
+        ? 'Risposta corretta! Ottimo lavoro.'
+        : quiz.explanation ?? 'Risposta errata, ma puoi riprovare subito.'
+    );
 
     await supabase.from('user_quiz_attempts').insert({
       user_id: user.id,
@@ -110,7 +114,12 @@ export default function QuizPage() {
       earned_xp: earnedXp
     });
 
-    const { data: profile } = await supabase.from('profiles').select('total_xp, current_streak, last_activity_on').eq('id', user.id).single();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('total_xp, current_streak, last_activity_on')
+      .eq('id', user.id)
+      .single();
+
     const profileRow = profile as Profile | null;
 
     const today = new Date();
@@ -146,9 +155,7 @@ export default function QuizPage() {
       .eq('level_id', quiz.level_id);
 
     const correctIds = new Set(
-      (allAttempts ?? [])
-        .filter((item) => item.is_correct)
-        .map((item) => item.quiz_id)
+      (allAttempts ?? []).filter((item) => item.is_correct).map((item) => item.quiz_id)
     );
 
     const completedQuizzes = correctIds.size;
@@ -166,9 +173,15 @@ export default function QuizPage() {
       { onConflict: 'user_id,level_id' }
     );
 
-    if (isCompleted && quiz.levels?.sort_order) {
-      const badgeCode = `level-${quiz.levels.sort_order}-complete`;
-      const { data: badge } = await supabase.from('badges').select('id').eq('code', badgeCode).single();
+    const currentLevel = quiz.levels?.[0];
+
+    if (isCompleted && currentLevel?.sort_order) {
+      const badgeCode = `level-${currentLevel.sort_order}-complete`;
+      const { data: badge } = await supabase
+        .from('badges')
+        .select('id')
+        .eq('code', badgeCode)
+        .single();
 
       if (badge?.id) {
         await supabase.from('user_badges').upsert(
@@ -184,6 +197,8 @@ export default function QuizPage() {
     setSaving(false);
   }
 
+  const currentLevel = quiz?.levels?.[0];
+
   return (
     <div className="page">
       <div className="container" style={{ maxWidth: 820 }}>
@@ -193,7 +208,10 @@ export default function QuizPage() {
             <h1 className="title mt-16">{quiz?.prompt ?? 'Caricamento...'}</h1>
             <p className="subtitle">Scegli una risposta.</p>
           </div>
-          <Link href={quiz?.levels?.slug ? `/livello/${quiz.levels.slug}` : '/dashboard'} className="button button-outline">
+          <Link
+            href={currentLevel?.slug ? `/livello/${currentLevel.slug}` : '/dashboard'}
+            className="button button-outline"
+          >
             Torna al livello
           </Link>
         </div>
@@ -233,10 +251,15 @@ export default function QuizPage() {
                 <h3 style={{ marginTop: 0 }}>{isCorrect ? 'Corretto 🎉' : 'Quasi!'}</h3>
                 <p>{feedback}</p>
                 <div className="row mt-16">
-                  <Link href={quiz?.levels?.slug ? `/livello/${quiz.levels.slug}` : '/dashboard'} className="button button-primary">
+                  <Link
+                    href={currentLevel?.slug ? `/livello/${currentLevel.slug}` : '/dashboard'}
+                    className="button button-primary"
+                  >
                     Torna al livello
                   </Link>
-                  <Link href="/dashboard" className="button button-outline">Vai alla home</Link>
+                  <Link href="/dashboard" className="button button-outline">
+                    Vai alla home
+                  </Link>
                 </div>
               </div>
             )}

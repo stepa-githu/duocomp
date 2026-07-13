@@ -17,7 +17,7 @@ type QuizRow = {
   prompt: string;
   levels: {
     title: string;
-  } | null;
+  }[] | null;
 };
 
 export default function AdminPage() {
@@ -61,7 +61,11 @@ export default function AdminPage() {
         return;
       }
 
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
       if (!profile || profile.role !== 'admin') {
         router.push('/dashboard');
@@ -78,7 +82,11 @@ export default function AdminPage() {
   async function loadData() {
     const [{ data: levelRows }, { data: quizRows }] = await Promise.all([
       supabase.from('levels').select('id, title, slug, sort_order').order('sort_order'),
-      supabase.from('quizzes').select('id, prompt, levels(title)').order('created_at', { ascending: false }).limit(20)
+      supabase
+        .from('quizzes')
+        .select('id, prompt, levels(title)')
+        .order('created_at', { ascending: false })
+        .limit(20)
     ]);
 
     const nextLevels = (levelRows ?? []) as Level[];
@@ -190,7 +198,13 @@ export default function AdminPage() {
   }
 
   if (loading) {
-    return <div className="page"><div className="container"><div className="card">Verifica permessi admin...</div></div></div>;
+    return (
+      <div className="page">
+        <div className="container">
+          <div className="card">Verifica permessi admin...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -203,7 +217,9 @@ export default function AdminPage() {
             <p className="subtitle">Qui puoi creare e modificare le cose principali del MVP.</p>
           </div>
           <div className="row">
-            <Link href="/dashboard" className="button button-outline">Dashboard</Link>
+            <Link href="/dashboard" className="button button-outline">
+              Dashboard
+            </Link>
           </div>
         </div>
 
@@ -212,44 +228,142 @@ export default function AdminPage() {
         <div className="grid grid-2">
           <form className="card grid" onSubmit={createLevel}>
             <h2 style={{ marginTop: 0 }}>Crea livello</h2>
-            <input className="input" placeholder="Titolo livello" value={levelForm.title} onChange={(e) => setLevelForm({ ...levelForm, title: e.target.value })} required />
-            <input className="input" placeholder="Slug" value={levelForm.slug} onChange={(e) => setLevelForm({ ...levelForm, slug: e.target.value })} required />
-            <textarea className="textarea" placeholder="Descrizione" value={levelForm.description} onChange={(e) => setLevelForm({ ...levelForm, description: e.target.value })} />
-            <select className="select" value={levelForm.difficulty} onChange={(e) => setLevelForm({ ...levelForm, difficulty: e.target.value })}>
+            <input
+              className="input"
+              placeholder="Titolo livello"
+              value={levelForm.title}
+              onChange={(e) => setLevelForm({ ...levelForm, title: e.target.value })}
+              required
+            />
+            <input
+              className="input"
+              placeholder="Slug"
+              value={levelForm.slug}
+              onChange={(e) => setLevelForm({ ...levelForm, slug: e.target.value })}
+              required
+            />
+            <textarea
+              className="textarea"
+              placeholder="Descrizione"
+              value={levelForm.description}
+              onChange={(e) => setLevelForm({ ...levelForm, description: e.target.value })}
+            />
+            <select
+              className="select"
+              value={levelForm.difficulty}
+              onChange={(e) => setLevelForm({ ...levelForm, difficulty: e.target.value })}
+            >
               <option value="base">Base</option>
               <option value="intermedio">Intermedio</option>
               <option value="avanzato">Avanzato</option>
             </select>
-            <input className="input" type="number" placeholder="Ordine" value={levelForm.sort_order} onChange={(e) => setLevelForm({ ...levelForm, sort_order: Number(e.target.value) })} />
-            <input className="input" placeholder="Titolo badge" value={levelForm.badge_title} onChange={(e) => setLevelForm({ ...levelForm, badge_title: e.target.value })} />
-            <input className="input" placeholder="Icona badge" value={levelForm.badge_icon} onChange={(e) => setLevelForm({ ...levelForm, badge_icon: e.target.value })} />
-            <button className="button button-primary" type="submit">Salva livello</button>
+            <input
+              className="input"
+              type="number"
+              placeholder="Ordine"
+              value={levelForm.sort_order}
+              onChange={(e) => setLevelForm({ ...levelForm, sort_order: Number(e.target.value) })}
+            />
+            <input
+              className="input"
+              placeholder="Titolo badge"
+              value={levelForm.badge_title}
+              onChange={(e) => setLevelForm({ ...levelForm, badge_title: e.target.value })}
+            />
+            <input
+              className="input"
+              placeholder="Icona badge"
+              value={levelForm.badge_icon}
+              onChange={(e) => setLevelForm({ ...levelForm, badge_icon: e.target.value })}
+            />
+            <button className="button button-primary" type="submit">
+              Salva livello
+            </button>
           </form>
 
           <form className="card grid" onSubmit={createQuiz}>
             <h2 style={{ marginTop: 0 }}>Crea quiz</h2>
-            <select className="select" value={quizForm.level_id} onChange={(e) => setQuizForm({ ...quizForm, level_id: e.target.value })}>
+            <select
+              className="select"
+              value={quizForm.level_id}
+              onChange={(e) => setQuizForm({ ...quizForm, level_id: e.target.value })}
+            >
               {levels.map((level) => (
-                <option key={level.id} value={level.id}>{level.title}</option>
+                <option key={level.id} value={level.id}>
+                  {level.title}
+                </option>
               ))}
             </select>
-            <input className="input" placeholder="Domanda" value={quizForm.prompt} onChange={(e) => setQuizForm({ ...quizForm, prompt: e.target.value })} required />
-            <textarea className="textarea" placeholder="Spiegazione" value={quizForm.explanation} onChange={(e) => setQuizForm({ ...quizForm, explanation: e.target.value })} />
+            <input
+              className="input"
+              placeholder="Domanda"
+              value={quizForm.prompt}
+              onChange={(e) => setQuizForm({ ...quizForm, prompt: e.target.value })}
+              required
+            />
+            <textarea
+              className="textarea"
+              placeholder="Spiegazione"
+              value={quizForm.explanation}
+              onChange={(e) => setQuizForm({ ...quizForm, explanation: e.target.value })}
+            />
             <div className="grid grid-2">
-              <input className="input" type="number" placeholder="Ordine" value={quizForm.sort_order} onChange={(e) => setQuizForm({ ...quizForm, sort_order: Number(e.target.value) })} />
-              <input className="input" type="number" placeholder="XP" value={quizForm.xp_reward} onChange={(e) => setQuizForm({ ...quizForm, xp_reward: Number(e.target.value) })} />
+              <input
+                className="input"
+                type="number"
+                placeholder="Ordine"
+                value={quizForm.sort_order}
+                onChange={(e) => setQuizForm({ ...quizForm, sort_order: Number(e.target.value) })}
+              />
+              <input
+                className="input"
+                type="number"
+                placeholder="XP"
+                value={quizForm.xp_reward}
+                onChange={(e) => setQuizForm({ ...quizForm, xp_reward: Number(e.target.value) })}
+              />
             </div>
-            <input className="input" placeholder="Opzione 1" value={quizForm.option_1} onChange={(e) => setQuizForm({ ...quizForm, option_1: e.target.value })} required />
-            <input className="input" placeholder="Opzione 2" value={quizForm.option_2} onChange={(e) => setQuizForm({ ...quizForm, option_2: e.target.value })} required />
-            <input className="input" placeholder="Opzione 3" value={quizForm.option_3} onChange={(e) => setQuizForm({ ...quizForm, option_3: e.target.value })} required />
-            <input className="input" placeholder="Opzione 4" value={quizForm.option_4} onChange={(e) => setQuizForm({ ...quizForm, option_4: e.target.value })} required />
-            <select className="select" value={quizForm.correct_option} onChange={(e) => setQuizForm({ ...quizForm, correct_option: Number(e.target.value) })}>
+            <input
+              className="input"
+              placeholder="Opzione 1"
+              value={quizForm.option_1}
+              onChange={(e) => setQuizForm({ ...quizForm, option_1: e.target.value })}
+              required
+            />
+            <input
+              className="input"
+              placeholder="Opzione 2"
+              value={quizForm.option_2}
+              onChange={(e) => setQuizForm({ ...quizForm, option_2: e.target.value })}
+              required
+            />
+            <input
+              className="input"
+              placeholder="Opzione 3"
+              value={quizForm.option_3}
+              onChange={(e) => setQuizForm({ ...quizForm, option_3: e.target.value })}
+              required
+            />
+            <input
+              className="input"
+              placeholder="Opzione 4"
+              value={quizForm.option_4}
+              onChange={(e) => setQuizForm({ ...quizForm, option_4: e.target.value })}
+              required
+            />
+            <select
+              className="select"
+              value={quizForm.correct_option}
+              onChange={(e) => setQuizForm({ ...quizForm, correct_option: Number(e.target.value) })}
+            >
               <option value={1}>Risposta corretta: 1</option>
               <option value={2}>Risposta corretta: 2</option>
               <option value={3}>Risposta corretta: 3</option>
               <option value={4}>Risposta corretta: 4</option>
             </select>
-            <button className="button button-primary" type="submit">Salva quiz</button>
+            <button className="button button-primary" type="submit">
+              Salva quiz
+            </button>
           </form>
         </div>
 
@@ -260,8 +374,12 @@ export default function AdminPage() {
               {levels.map((level) => (
                 <div key={level.id} className="path-node">
                   <div>
-                    <strong>{level.sort_order}. {level.title}</strong>
-                    <p className="muted" style={{ margin: '6px 0 0' }}>{level.slug}</p>
+                    <strong>
+                      {level.sort_order}. {level.title}
+                    </strong>
+                    <p className="muted" style={{ margin: '6px 0 0' }}>
+                      {level.slug}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -275,7 +393,9 @@ export default function AdminPage() {
                 <div key={quiz.id} className="path-node">
                   <div>
                     <strong>{quiz.prompt}</strong>
-                    <p className="muted" style={{ margin: '6px 0 0' }}>{quiz.levels?.title ?? 'Senza livello'}</p>
+                    <p className="muted" style={{ margin: '6px 0 0' }}>
+                      {quiz.levels?.[0]?.title ?? 'Senza livello'}
+                    </p>
                   </div>
                 </div>
               ))}

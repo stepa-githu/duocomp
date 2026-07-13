@@ -35,7 +35,7 @@ type UserBadge = {
   badges: {
     title: string;
     icon: string | null;
-  } | null;
+  }[] | null;
 };
 
 export default function DashboardPage() {
@@ -61,8 +61,14 @@ export default function DashboardPage() {
         await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('levels').select('*').eq('is_published', true).order('sort_order'),
-          supabase.from('user_level_progress').select('level_id, completed_quizzes, is_completed').eq('user_id', user.id),
-          supabase.from('user_badges').select('id, badges(title, icon)').eq('user_id', user.id)
+          supabase
+            .from('user_level_progress')
+            .select('level_id, completed_quizzes, is_completed')
+            .eq('user_id', user.id),
+          supabase
+            .from('user_badges')
+            .select('id, badges(title, icon)')
+            .eq('user_id', user.id)
         ]);
 
       setProfile(profileRow as Profile);
@@ -98,7 +104,13 @@ export default function DashboardPage() {
   }
 
   if (loading) {
-    return <div className="page"><div className="container"><div className="card">Caricamento...</div></div></div>;
+    return (
+      <div className="page">
+        <div className="container">
+          <div className="card">Caricamento...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -111,9 +123,13 @@ export default function DashboardPage() {
           </div>
           <div className="row">
             {profile?.role === 'admin' ? (
-              <Link href="/admin" className="button button-secondary">Admin</Link>
+              <Link href="/admin" className="button button-secondary">
+                Admin
+              </Link>
             ) : null}
-            <button className="button button-outline" onClick={logout}>Esci</button>
+            <button className="button button-outline" onClick={logout}>
+              Esci
+            </button>
           </div>
         </div>
 
@@ -153,8 +169,8 @@ export default function DashboardPage() {
                 ) : (
                   badges.map((item) => (
                     <div className="row" key={item.id}>
-                      <span style={{ fontSize: 24 }}>{item.badges?.icon ?? '🏅'}</span>
-                      <strong>{item.badges?.title}</strong>
+                      <span style={{ fontSize: 24 }}>{item.badges?.[0]?.icon ?? '🏅'}</span>
+                      <strong>{item.badges?.[0]?.title ?? 'Badge'}</strong>
                     </div>
                   ))
                 )}
